@@ -7,22 +7,29 @@ from datetime import datetime, timedelta, timezone
 st.set_page_config(page_title="Exam Cracker AI", page_icon="🎓")
 
 # --- 2. SETTINGS & SECRETS ---
-# Yahan apne control variables rakhein
 VIP_PASSCODE = "VIP786"   # Paid bachon ke liye
 FREE_LIMIT = 2            # Free walon ke liye daily limit
+
+# --- 3. AUTOMATIC KEY LOADER (JADOO) ---
+# Ye line ab user se nahi mangegi, seedha Streamlit Secrets se uthayegi
+try:
+    api_key = st.secrets["GEMINI_API_KEY"]
+except:
+    st.error("🚨 Owner ne API Key set nahi ki! (Settings > Secrets mein dalein)")
+    st.stop()
 
 # Pakistan Date ke hisaab se Daily Code (Auto)
 pak_time = timezone(timedelta(hours=5))
 today_date = datetime.now(pak_time).day
 DAILY_CODE = f"PAKISTAN{today_date}" # e.g., PAKISTAN14
 
-# --- 3. SESSION STATE (Memory) ---
+# --- 4. SESSION STATE (Memory) ---
 if 'count' not in st.session_state:
     st.session_state.count = 0
 if 'is_vip' not in st.session_state:
     st.session_state.is_vip = False
 
-# --- 4. SIDEBAR (The Guard & Menu) ---
+# --- 5. SIDEBAR (The Guard & Menu) ---
 with st.sidebar:
     st.title("🎓 Exam Cracker Menu")
     
@@ -58,11 +65,10 @@ with st.sidebar:
         st.write(f"Free Tries Left: **{left}**")
         if left == 0:
             st.error("Quota Khatam! Kal aana ya VIP lo.")
+            
+    # NOTE: Ab yahan se API Key ka box hata diya gaya hai.
 
-    st.markdown("---")
-    api_key = st.text_input("Paste Gemini API Key:", type="password")
-
-# --- 5. MAIN PAGE ---
+# --- 6. MAIN PAGE ---
 st.title("🎓 Exam Cracker AI")
 st.write("**Punjab Board Special: Checker + Guess Paper**")
 
@@ -84,10 +90,8 @@ if mode == "📝 Paper Check Karo":
     if not can_check:
         st.warning("⛔ Limit Khatam! Unlimited access ke liye niche dekhein.")
         with st.expander("💎 Get VIP Access (Rs 100/Week)"):
-             # --- NUMBER UPDATED HERE ---
              st.write("1. **Rs 100** EasyPaisa: **0317-4796154**") 
              st.write("2. Screenshot WhatsApp karein.")
-             # --- WHATSAPP LINK UPDATED HERE (92 Format) ---
              st.markdown("[👉 Click to WhatsApp Me](https://wa.me/923174796154)")
         st.stop()
 
@@ -109,8 +113,9 @@ if mode == "📝 Paper Check Karo":
     uploaded_file = st.file_uploader("Sirf English Medium Papers (Chem/Phy/Bio)", type=["jpg", "png"])
     
     if uploaded_file and st.button("Check My Paper 🚀"):
+        # Ab hum 'api_key' variable use karenge jo secrets se aaya hai
         if not api_key:
-            st.error("API Key to daalo ustad!")
+             st.error("System Error: API Key missing.")
         else:
             with st.spinner("Exam Cracker dimagh laga raha hai... 🧠"):
                 try:

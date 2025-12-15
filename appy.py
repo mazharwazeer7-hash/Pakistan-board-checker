@@ -3,139 +3,164 @@ import google.generativeai as genai
 from PIL import Image
 from datetime import datetime, timedelta, timezone
 
-# --- 1. PAGE SETUP ---
-st.set_page_config(page_title="Exam Cracker AI", page_icon="🎓")
+# --- 1. PROFESSIONAL PAGE SETUP ---
+st.set_page_config(
+    page_title="Exam Cracker Pro",
+    page_icon="🎓",
+    layout="centered",
+    initial_sidebar_state="expanded"
+)
 
-# --- 2. SETTINGS & VIP REGISTER (SMART SYSTEM) ---
-# Yahan aap apne customers add karenge.
-# Format: "CODE": "EXPIRY-DATE (Saal-Mahina-Din)"
+# --- 2. CUSTOM STYLING (CSS) ---
+# Ye code app ko sunder banayega
+st.markdown("""
+    <style>
+    .stButton>button {
+        background-color: #FF4B4B;
+        color: white;
+        border-radius: 10px;
+        height: 3em;
+        width: 100%;
+        font-weight: bold;
+    }
+    .main-header {
+        font-size: 2.5rem;
+        color: #333;
+        text-align: center;
+        font-weight: 700;
+    }
+    .sub-header {
+        font-size: 1.2rem;
+        color: #666;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- 3. SYSTEM CONFIGURATION ---
+# VIP Database (Aapka Register)
 VIP_DB = {
-    "VIP786": "2030-01-01",       # Master Key (Hamesha chalegi)
-    "AliTrial": "2025-12-16",     # Misaal: Ali ka 2 din ka trial
-    "AhmedWk1": "2025-12-21",     # Misaal: Ahmed ka 1 week
-    # Jab naya banda aaye, bas yahan ek line aur likh dein
+    "VIP786": "2030-01-01",      # Master Code
+    "AliTrial": "2025-12-20",    # Example
 }
-
 FREE_LIMIT = 2
 
-# --- 3. AUTOMATIC KEY LOADER ---
-try:
-    api_key = st.secrets["GEMINI_API_KEY"]
-except:
-    st.error("🚨 API Key Missing! Secrets check karein.")
-    st.stop()
-
-# Pakistan Date
+# Time Setup
 pak_time = timezone(timedelta(hours=5))
 today_date = datetime.now(pak_time).date()
 DAILY_CODE = f"PAKISTAN{today_date.day}"
 
-# --- 4. SESSION STATE ---
-if 'count' not in st.session_state:
-    st.session_state.count = 0
-if 'is_vip' not in st.session_state:
-    st.session_state.is_vip = False
-if 'vip_expiry' not in st.session_state:
-    st.session_state.vip_expiry = None
+# --- 4. API & MODEL SETUP ---
+try:
+    if "GEMINI_API_KEY" in st.secrets:
+        api_key = st.secrets["GEMINI_API_KEY"]
+        genai.configure(api_key=api_key)
+    else:
+        st.error("🚨 System Error: API Key Missing.")
+        st.stop()
+except Exception as e:
+    st.error(f"Connection Error: {e}")
 
-# --- 5. SIDEBAR ---
+# --- 5. SESSION STATE (Memory) ---
+if 'count' not in st.session_state: st.session_state.count = 0
+if 'is_vip' not in st.session_state: st.session_state.is_vip = False
+if 'user_name' not in st.session_state: st.session_state.user_name = "Guest"
+
+# --- 6. SIDEBAR (Login System) ---
 with st.sidebar:
-    st.title("🎓 Exam Cracker Menu")
-    st.write("### 🔐 Access Control")
+    st.title("🔐 Login Panel")
     
     if st.session_state.is_vip:
-        # Check Expiry
-        if st.session_state.vip_expiry:
-            exp_date = datetime.strptime(st.session_state.vip_expiry, "%Y-%m-%d").date()
-            if today_date > exp_date:
-                st.session_state.is_vip = False
-                st.error("⏳ Subscription Expired! Renew karein.")
-                st.rerun()
-        
-        st.success(f"💎 VIP Active!")
-        if st.session_state.vip_expiry:
-            st.caption(f"Valid till: {st.session_state.vip_expiry}")
-            
+        st.success(f"👤 Welcome, {st.session_state.user_name}!")
+        st.info("💎 Premium Access Active")
         if st.button("Logout"):
             st.session_state.is_vip = False
-            st.session_state.vip_expiry = None
             st.rerun()
     else:
-        code_input = st.text_input("Enter Daily or VIP Code:", type="password")
+        st.write("Enter Access Code:")
+        code_input = st.text_input("Code", type="password", label_visibility="collapsed")
         
-        if code_input:
+        if st.button("Login"):
             if code_input in VIP_DB:
-                expiry_str = VIP_DB[code_input]
-                exp_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
-                
+                exp_date = datetime.strptime(VIP_DB[code_input], "%Y-%m-%d").date()
                 if today_date <= exp_date:
                     st.session_state.is_vip = True
-                    st.session_state.vip_expiry = expiry_str
-                    st.success(f"💎 Welcome! Valid till {expiry_str}")
+                    st.session_state.user_name = code_input
+                    st.toast("Login Successful!", icon="✅")
                     st.rerun()
                 else:
-                    st.error(f"❌ Ye Code Expire ho gaya! ({expiry_str})")
+                    st.error("❌ Code Expired!")
             elif code_input == DAILY_CODE:
-                st.success(f"🔓 Daily Code Applied! (Limit: {FREE_LIMIT})")
-            else:
-                st.error("❌ Ghalat Code!")
-                st.info(f"Hint: Aaj ka free code hai PAKISTAN{today_date.day}")
+                st.toast(f"Daily Code Active! ({FREE_LIMIT} Tries)", icon="🔓")
+            elif code_input:
+                st.error("❌ Invalid Code")
 
-    st.markdown("---")
+    st.divider()
     if not st.session_state.is_vip:
-        used = st.session_state.count
-        left = FREE_LIMIT - used
-        st.write(f"Free Tries Left: **{left}**")
-        if left == 0:
-            st.error("Quota Khatam!")
+        left = FREE_LIMIT - st.session_state.count
+        st.metric("Free Tries Left", left)
 
-# --- 6. MAIN APP ---
-st.title("🎓 MAZHAR BHAI KA APP")
-st.write("**Punjab Board Special**")
+# --- 7. MAIN INTERFACE ---
+st.markdown('<div class="main-header">🎓 Exam Cracker AI</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-header">Punjab Board Professional Checker</div>', unsafe_allow_html=True)
 
-mode = st.radio("Select Mode:", ["📝 Paper Check Karo", "📚 Smart Past Papers (Demo)"])
+# TABS LAYOUT (Professional Look)
+tab1, tab2 = st.tabs(["📝 Paper Checker", "📚 Smart Prep (Beta)"])
 
-if mode == "📝 Paper Check Karo":
-    can_check = False
-    if st.session_state.is_vip:
-        can_check = True
-    elif st.session_state.count < FREE_LIMIT:
-        can_check = True
+with tab1:
+    st.write("### 📤 Upload Answer Sheet")
+    st.caption("Supports: JPG, PNG (Max 200MB)")
     
-    if not can_check:
-        st.warning("⛔ Limit Khatam! Unlimited access ke liye:")
-        with st.expander("💎 Get VIP Access (Rs 100/Week)"):
-             st.write("1. **Rs 100** EasyPaisa: **0317-4796154**") 
-             st.write("2. Screenshot WhatsApp karein.")
-             st.markdown("[👉 WhatsApp Me](https://wa.me/923174796154)")
-        st.stop()
+    uploaded_file = st.file_uploader("", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
 
-    SYSTEM_PROMPT = """
-    Role: Senior Professor (Punjab Board).
-    Task: Check this handwritten Chemistry/Physics paper.
-    Output: 1. Shabash, 2. Galtiyan, 3. Ideal Jawab, 4. Marks.
-    Tone: Roman Urdu + English.
-    """
+    # Limit Check
+    allowed = False
+    if st.session_state.is_vip: allowed = True
+    elif st.session_state.count < FREE_LIMIT: allowed = True
 
-    uploaded_file = st.file_uploader("Upload Paper", type=["jpg", "png"])
-    
-    if uploaded_file and st.button("Check My Paper 🚀"):
-        with st.spinner("Checking... 🧠"):
-            try:
-                genai.configure(api_key=api_key)
-                model = genai.GenerativeModel("gemini-pro")
-                response = model.generate_content([SYSTEM_PROMPT, Image.open(uploaded_file)])
-                st.success("✅ Report Ready!")
-                st.write(response.text)
-                if not st.session_state.is_vip:
-                    st.session_state.count += 1
-            except Exception as e:
-                st.error(f"Error: {e}")
+    if uploaded_file:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded Paper", use_container_width=True)
+        
+        if allowed:
+            if st.button("🔍 Analyze Paper Now"):
+                with st.spinner("🤖 AI Professor checking... (Please wait)"):
+                    try:
+                        # ULTRA PROMPT
+                        prompt = """
+                        Act as a Strict Senior Professor of Punjab Board Pakistan (Class 12).
+                        Analyze this handwritten paper image carefully.
+                        
+                        Provide output in this format:
+                        1. **Marks:** [Obtained]/[Total]
+                        2. **Mistakes:** (List specific mistakes in bullet points)
+                        3. **Correction:** (Explain the right answer simply)
+                        4. **Remarks:** (Encouraging feedback in Roman Urdu)
+                        """
+                        
+                        # MODEL CALL
+                        model = genai.GenerativeModel("gemini-1.5-flash")
+                        response = model.generate_content([prompt, image])
+                        
+                        st.success("✅ Assessment Complete!")
+                        st.markdown(response.text)
+                        
+                        # Counter Update
+                        if not st.session_state.is_vip:
+                            st.session_state.count += 1
+                            
+                    except Exception as e:
+                        st.error("⚠️ Network Error. Please try again.")
+                        # Secret error for you (Developer)
+                        st.caption(f"Dev Error: {e}")
+        else:
+            st.warning("⛔ Free Limit Reached. Please enter a VIP Code.")
 
-elif mode == "📚 Smart Past Papers (Demo)":
-    st.subheader("🧪 Chemistry - Chapter 1")
-    questions = [{"q": "Define Stoichiometry", "times": 18}, {"q": "Limiting Reactant", "times": 12}]
-    for q in questions: st.write(f"- {q['q']} (**{q['times']}** times)")
+with tab2:
+    st.info("🚧 Coming Soon: Smart Past Papers & Guess Papers")
+    st.image("https://img.freepik.com/free-vector/exams-concept-illustration_114360-2754.jpg", width=300)
 
+# Footer
 st.markdown("---")
-st.caption("Powered by Exam Cracker AI | Developed by Mazhar")
+st.caption("© 2025 Exam Cracker AI | Professional Edition")

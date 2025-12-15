@@ -90,7 +90,7 @@ with st.sidebar:
             st.error("Quota Khatam!")
 
 # --- 6. MAIN APP ---
-st.title("🎓 Exam Cracker AI")
+st.title("🎓 MAZHAR BHAI KA APP")
 st.write("**Punjab Board Special**")
 
 mode = st.radio("Select Mode:", ["📝 Paper Check Karo", "📚 Smart Past Papers (Demo)"])

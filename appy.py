@@ -123,7 +123,7 @@ if mode == "📝 Paper Check Karo":
         with st.spinner("Checking... 🧠"):
             try:
                 genai.configure(api_key=api_key)
-                model = genai.GenerativeModel("gemini-1.5-flash")
+                model = genai.GenerativeModel("gemini-1.5-flash-001")
                 response = model.generate_content([SYSTEM_PROMPT, Image.open(uploaded_file)])
                 st.success("✅ Report Ready!")
                 st.write(response.text)

@@ -1,1 +1,3 @@
-model = genai.GenerativeModel("gemini-pro")
+streamlit
+google-generativeai
+Pillow
